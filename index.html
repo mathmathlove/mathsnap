@@ -57,7 +57,7 @@ f(x) = -(x-2)^2 + 5
 
 また、その最大値をとる x の値を求めよ。</textarea>
 <div class="actions" style="margin-top:8px"><button class="secondary" id="insert-equation">数式の例を挿入</button><button class="secondary" id="help">入力のコツ</button></div>
-<div id="helpbox" class="hint" hidden><b>かんたん入力で使える書き方</b><br>・累乗：<code>x^2</code>、<code>(a+b)^3</code><br>・平方根：<code>sqrt(x)</code> または <code>√x</code><br>・分数：<code>(a+b)/(c+d)</code>（分数として整形）<br>・記号：<code><=</code>、<code>>=</code>、<code>!=</code>、<code>pi</code>、<code>infinity</code><br>・数式だけの行は自動で数式表示。文章中の数式は <code>$x^2$</code> のように囲んでもOK。<br>Googleドキュメントのように、まず普通に打って大丈夫。複雑な式だけLaTeX入力に切り替えてね。</div>
+<div id="helpbox" class="hint" hidden><b>かんたん入力で使える書き方</b><br>・累乗：<code>x^2</code>、<code>(a+b)^3</code><br>・平方根：<code>sqrt(x)</code> または <code>√x</code><br>・分数：<code>(a+b)/(c+d)</code>（分数として整形）<br>・記号：<code><=</code>、<code>>=</code>、<code>!=</code>、<code>pi</code>、<code>infinity</code><br>・数式だけの行は自動で数式表示。日本語の文章中の数式は <code>$x^2$</code> のように囲むか、数式だけを別の行にしてね。<br>Googleドキュメントのように、まず普通に打って大丈夫。複雑な式だけLaTeX入力に切り替えてね。</div>
 <div class="row">
 <div><label for="size">文字サイズ</label><select id="size"><option value="16">小さめ</option><option value="18" selected>標準</option><option value="21">大きめ</option><option value="24">特大</option></select></div>
 <div><label for="width">画像幅</label><select id="width"><option value="900">900 px</option><option value="1200" selected>1200 px</option><option value="1600">1600 px</option></select></div>
@@ -75,7 +75,7 @@ f(x) = -(x-2)^2 + 5
 <script>
 const $ = id => document.getElementById(id);
 const original = {title:'数学問題', number:'第1問', body:'実数 $x$ に対して、次の関数の最大値を求めよ。\\n\\n$$f(x)=-(x-2)^2+5$$\\n\\nまた、その最大値をとる $x$ の値を求めよ。'};
-function setStatus(t){$('status').textContent=t}
+function setStatus(t){$('status').textContent=t}\nlet renderSequence = 0;
 function escapeHTML(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 function easyMath(s){
  // Lightweight, forgiving conversion for common textbook-style typing.
@@ -95,6 +95,9 @@ function easyMath(s){
 function looksLikeMath(line){
  const t=line.trim();
  if(!t) return false;
+ // Never treat a whole Japanese sentence as a display equation just because it contains
+ // an equation followed by words (e.g. "a^3-b^3=217を満たす整数...").
+ if(/[ぁ-んァ-ヶ一-龠]/.test(t)) return false;
  if(/^\$\$[\s\S]*\$\$$/.test(t) || /^\$[^$]+\$/.test(t)) return false;
  return /(?:=|<=|>=|!=|≤|≥|≠|\^|√|\b(?:sqrt|sin|cos|tan|log|lim)\b|f\s*\(|[a-zA-Z0-9]\s*[+*/-]|[+*/])/.test(t) && !/[。！？]$/.test(t);
 }
@@ -113,6 +116,7 @@ function renderText(s){
  }).join('');
 }
 async function update(){
+ const thisRender = ++renderSequence;
  $('preview-title').textContent=$('title').value.trim()||'数学問題';
  $('rendered').style.fontSize=$('size').value+'px';
  $('rendered').innerHTML='<p class="problem-number">'+escapeHTML($('number').value.trim()||'問題')+'</p>'+renderText($('body').value);
@@ -121,8 +125,8 @@ async function update(){
   if(!window.MathJax || !MathJax.typesetPromise) throw new Error('数式エンジンがまだ読み込まれていません。数秒後に再試行してね。');
   MathJax.typesetClear([$ ('rendered')]);
   await MathJax.typesetPromise([$ ('rendered')]);
-  setStatus('プレビューを更新しました。PNGとして保存できます。');
- }catch(e){setStatus(e.message||'描画に失敗しました。LaTeXの記法を確認してね。')}
+  if (thisRender === renderSequence) setStatus('プレビューを更新しました。PNGとして保存できます。');
+ }catch(e){if (thisRender === renderSequence) setStatus(e.message||'描画に失敗しました。LaTeXの記法を確認してね。')}
 }
 $('update').addEventListener('click',update);
 $('mode').addEventListener('change',update);
